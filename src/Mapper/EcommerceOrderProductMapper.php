@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webgriffe\SyliusActiveCampaignPlugin\Mapper;
 
+use Liip\ImagineBundle\Imagine\Cache\CacheManager;
 use Sylius\Component\Core\Model\ChannelInterface;
 use Sylius\Component\Core\Model\ImageInterface;
 use Sylius\Component\Core\Model\OrderInterface;
@@ -12,6 +13,7 @@ use Sylius\Component\Core\Model\ProductInterface;
 use Sylius\Component\Core\Model\TaxonInterface;
 use Symfony\Component\Asset\UrlPackage;
 use Symfony\Component\Asset\VersionStrategy\EmptyVersionStrategy;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webgriffe\SyliusActiveCampaignPlugin\Factory\ActiveCampaign\EcommerceOrderProductFactoryInterface;
 use Webgriffe\SyliusActiveCampaignPlugin\Generator\ChannelHostnameUrlGeneratorInterface;
 use Webgriffe\SyliusActiveCampaignPlugin\Model\ActiveCampaign\EcommerceOrderProductInterface;
@@ -22,6 +24,7 @@ final class EcommerceOrderProductMapper implements EcommerceOrderProductMapperIn
     public function __construct(
         private EcommerceOrderProductFactoryInterface $ecommerceOrderProductFactory,
         private ChannelHostnameUrlGeneratorInterface $channelHostnameUrlGenerator,
+        private CacheManager $cacheManager,
         private string $defaultLocale,
         private string $scheme = 'http',
         private ?string $imageType = null,
@@ -65,11 +68,13 @@ final class EcommerceOrderProductMapper implements EcommerceOrderProductMapperIn
         Assert::notNull($hostname, 'The channel\'s hostname should not be null.');
         // TODO: is there any better way to handle this? Especially the media/image directory
         $urlPackage = new UrlPackage(
-            $this->scheme . '://' . $hostname . (str_ends_with($hostname, '/') ? '' : '/') . 'media/image',
+            $this->scheme . '://' . $hostname . (str_ends_with($hostname, '/') ? '' : '/') ,
             new EmptyVersionStrategy(),
         );
 
-        return $urlPackage->getUrl($path);
+        return $urlPackage->getUrl(
+            $this->cacheManager->getBrowserPath($path, 'sylius_shop_product_large_thumbnail', [], null, UrlGeneratorInterface::RELATIVE_PATH)
+        );
     }
 
     private function getImageUrlFromProductAndChannel(ProductInterface $product, ChannelInterface $channel): ?string
